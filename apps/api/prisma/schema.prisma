@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  COLLABORATOR
+  AGENT_ADMIN
+  VIEWER
+}
+
+enum ProjectStatus {
+  DRAFT
+  PLANNING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  QUEUED
+  ASSIGNED
+  RUNNING
+  WAITING
+  BLOCKED
+  REVIEW
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(OWNER)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  projects     Project[]
+}
+
+model Project {
+  id            String        @id @default(uuid())
+  ownerId       String
+  owner         User          @relation(fields: [ownerId], references: [id])
+  name          String
+  description   String?
+  status        ProjectStatus @default(DRAFT)
+  priority      Priority      @default(NORMAL)
+  dueAt         DateTime?
+  repositoryRef String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  tasks         Task[]
+
+  @@index([ownerId])
+}
+
+model Task {
+  id              String           @id @default(uuid())
+  projectId       String
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String
+  objective       String
+  status          TaskStatus       @default(QUEUED)
+  priority        Priority         @default(NORMAL)
+  assignedAgentId String?
+  dueAt           DateTime?
+  retryCount      Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  dependsOn       TaskDependency[] @relation("TaskDeps")
+  dependents      TaskDependency[] @relation("DependsOnTask")
+
+  @@index([projectId, status])
+}
+
+model TaskDependency {
+  taskId          String
+  dependsOnTaskId String
+  task            Task   @relation("TaskDeps", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn       Task   @relation("DependsOnTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnTaskId])
+}
+
+// Append-only: the application never updates or deletes rows here.
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorType     String
+  actorId       String?
+  action        String
+  resourceType  String
+  resourceId    String?
+  outcome       String   @default("success")
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([resourceType, resourceId])
+}

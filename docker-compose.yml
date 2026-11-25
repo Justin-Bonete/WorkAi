@@ -1,0 +1,21 @@
+# Local development services only. Dev credentials below are NOT for production.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: workai-postgres
+    environment:
+      POSTGRES_USER: workai
+      POSTGRES_PASSWORD: workai_dev_password
+      POSTGRES_DB: workai
+    ports:
+      - "5433:5432"   # 5433 on the host avoids clashing with a local Postgres on 5432
+    volumes:
+      - workai_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workai -d workai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  workai_pgdata:

@@ -1,0 +1,16 @@
+{
+  "name": "workai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate -w @workai/api",
+    "dev:api": "npm run start:dev -w @workai/api",
+    "dev:web": "npm run dev -w @workai/web",
+    "typecheck": "npm run typecheck -w @workai/api && npm run typecheck -w @workai/web",
+    "test": "npm run test -w @workai/api"
+  },
+  "engines": { "node": ">=20" }
+}
