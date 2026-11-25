@@ -1,34 +1,38 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import LogoutButton from '@/components/LogoutButton';
+import ProjectList from '@/components/ProjectList';
+import { TOKEN_COOKIE } from '@/lib/server-api';
+
+export const dynamic = 'force-dynamic';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
-type Health = { status: string; database: string; time: string };
-
-async function getHealth(): Promise<Health | null> {
+async function getHealth(): Promise<{ status: string; database: string } | null> {
   try {
     const res = await fetch(`${API_URL}/health`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return (await res.json()) as Health;
+    return res.ok ? await res.json() : null;
   } catch {
     return null;
   }
 }
 
 export default async function Home() {
+  if (!cookies().get(TOKEN_COOKIE)) redirect('/login');
   const health = await getHealth();
-  const apiUp = health !== null;
   return (
     <main>
-      <h1>WorkAI</h1>
-      <p className="sub">Foundation shell. Login, projects and the task board arrive in the next step.</p>
-      <div className="grid">
-        <section className="card">
-          <h2>API</h2>
-          <span className={`badge ${apiUp ? 'ok' : 'bad'}`}>{apiUp ? health.status : 'unreachable'}</span>
-        </section>
-        <section className="card">
-          <h2>Database</h2>
-          <span className={`badge ${health?.database === 'ok' ? 'ok' : 'bad'}`}>{health?.database ?? 'unknown'}</span>
-        </section>
-      </div>
+      <header className="topbar">
+        <div>
+          <h1>WorkAI</h1>
+          <p className="sub">
+            API <span className={health ? 'ok' : 'bad'}>{health?.status ?? 'unreachable'}</span> · Database{' '}
+            <span className={health?.database === 'ok' ? 'ok' : 'bad'}>{health?.database ?? 'unknown'}</span>
+          </p>
+        </div>
+        <LogoutButton />
+      </header>
+      <ProjectList />
     </main>
   );
 }
