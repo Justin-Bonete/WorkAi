@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { TaskStatus } from '@prisma/client';
+import { isAgentId } from '../agents/roster';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/task.dto';
@@ -102,6 +103,26 @@ export class TasksService {
       resourceId: id,
     });
     return this.prisma.task.findUniqueOrThrow({ where: { id } });
+  }
+
+  async assign(userId: string, id: string, agentId: string | null) {
+    const task = await this.get(userId, id);
+    if (agentId !== null && !isAgentId(agentId)) throw new BadRequestException('Unknown agent');
+    if (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELLED) {
+      throw new BadRequestException('Finished tasks cannot be reassigned');
+    }
+    const updated = await this.prisma.task.update({
+      where: { id },
+      data: { assignedAgentId: agentId },
+      include: { dependsOn: true },
+    });
+    await this.audit.record({
+      actorId: userId,
+      action: agentId ? 'task.assigned_to_agent' : 'task.unassigned',
+      resourceType: 'task',
+      resourceId: id,
+    });
+    return updated;
   }
 
   cancel(userId: string, id: string) {

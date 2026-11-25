@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import LogoutButton from '@/components/LogoutButton';
-import ProjectList from '@/components/ProjectList';
+import AppShell from '@/components/AppShell';
+import Dashboard from '@/components/Dashboard';
 import { TOKEN_COOKIE } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -21,18 +21,8 @@ export default async function Home() {
   if (!cookies().get(TOKEN_COOKIE)) redirect('/login');
   const health = await getHealth();
   return (
-    <main>
-      <header className="topbar">
-        <div>
-          <h1>WorkAI</h1>
-          <p className="sub">
-            API <span className={health ? 'ok' : 'bad'}>{health?.status ?? 'unreachable'}</span> · Database{' '}
-            <span className={health?.database === 'ok' ? 'ok' : 'bad'}>{health?.database ?? 'unknown'}</span>
-          </p>
-        </div>
-        <LogoutButton />
-      </header>
-      <ProjectList />
-    </main>
+    <AppShell>
+      <Dashboard health={health} />
+    </AppShell>
   );
 }

@@ -2,12 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import type { Agent } from '@/lib/agents';
 import { STATUSES, TRANSITIONS } from '@/lib/task-state';
 import type { Project, Task, TaskStatus } from '@/lib/types';
 
 export default function TaskBoard({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -17,12 +19,14 @@ export default function TaskBoard({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const [p, t] = await Promise.all([
+      const [p, t, a] = await Promise.all([
         api<Project>(`projects/${projectId}`),
         api<Task[]>(`projects/${projectId}/tasks?take=100`),
+        api<Agent[]>('agents'),
       ]);
       setProject(p);
       setTasks(t);
+      setAgents(a);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load project');
@@ -61,6 +65,16 @@ export default function TaskBoard({ projectId }: { projectId: string }) {
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...updated } : t)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not update task');
+    }
+  }
+
+  async function assign(task: Task, agentId: string) {
+    setError(null);
+    try {
+      const updated = await api<Task>(`tasks/${task.id}/assign`, { method: 'POST', body: { agentId: agentId || null } });
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...updated } : t)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not assign task');
     }
   }
 
@@ -118,6 +132,19 @@ export default function TaskBoard({ projectId }: { projectId: string }) {
                     <p className="muted">Waits for: {t.dependsOn.map((d) => titleOf(d.dependsOnTaskId)).join(', ')}</p>
                   )}
                   {t.status === 'FAILED' && <p className="muted">Retries used: {t.retryCount}</p>}
+                  <label className="assign">
+                    Assigned bot
+                    <select
+                      value={t.assignedAgentId ?? ''}
+                      disabled={t.status === 'COMPLETED' || t.status === 'CANCELLED'}
+                      onChange={(e) => void assign(t, e.target.value)}
+                    >
+                      <option value="">Unassigned</option>
+                      {agents.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </label>
                   <div className="actions">
                     {TRANSITIONS[t.status].map((to) => (
                       <button key={to} className="btn small" onClick={() => void move(t, to)}>

@@ -5,7 +5,7 @@ import { API_URL, TOKEN_COOKIE } from '@/lib/server-api';
 export const dynamic = 'force-dynamic';
 
 // Only these API areas may be reached through the browser proxy.
-const ALLOWED = [/^projects(\/|$)/, /^tasks(\/|$)/, /^auth\/me$/];
+const ALLOWED = [/^projects(\/|$)/, /^tasks(\/|$)/, /^agents$/, /^auth\/me$/];
 
 async function handle(req: NextRequest, ctx: { params: { path: string[] } }) {
   const path = ctx.params.path.join('/');

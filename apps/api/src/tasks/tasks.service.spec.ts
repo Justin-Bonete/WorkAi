@@ -9,6 +9,7 @@ function setup() {
       count: jest.fn(),
       create: jest.fn(),
       updateMany: jest.fn(),
+      update: jest.fn(),
       findUniqueOrThrow: jest.fn(),
     },
   };
@@ -68,5 +69,26 @@ describe('TasksService', () => {
     await expect(
       service.create('u1', 'p1', { title: 'x', objective: 'y', dependsOn: ['00000000-0000-4000-8000-000000000000'] }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects assigning to an unknown agent', async () => {
+    const { prisma, service } = setup();
+    prisma.task.findFirst.mockResolvedValue(taskRow());
+    await expect(service.assign('u1', 't1', 'nobody')).rejects.toThrow('Unknown agent');
+  });
+
+  it('does not reassign finished tasks', async () => {
+    const { prisma, service } = setup();
+    prisma.task.findFirst.mockResolvedValue(taskRow({ status: 'COMPLETED' }));
+    await expect(service.assign('u1', 't1', 'qa-engineer')).rejects.toThrow('Finished tasks');
+  });
+
+  it('assigns a known agent and audits it', async () => {
+    const { prisma, audit, service } = setup();
+    prisma.task.findFirst.mockResolvedValue(taskRow());
+    prisma.task.update.mockResolvedValue({ id: 't1', assignedAgentId: 'qa-engineer' });
+    await service.assign('u1', 't1', 'qa-engineer');
+    expect(prisma.task.update.mock.calls[0][0].data).toEqual({ assignedAgentId: 'qa-engineer' });
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'task.assigned_to_agent' }));
   });
 });

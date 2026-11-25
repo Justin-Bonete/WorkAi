@@ -18,5 +18,7 @@ export interface Task {
   status: TaskStatus;
   priority: string;
   retryCount: number;
+  assignedAgentId: string | null;
+  updatedAt: string;
   dependsOn?: { taskId: string; dependsOnTaskId: string }[];
 }

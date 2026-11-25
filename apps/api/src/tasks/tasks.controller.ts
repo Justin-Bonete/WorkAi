@@ -3,7 +3,7 @@ import { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PageQueryDto } from '../common-page.dto';
-import { CreateTaskDto, TaskListQueryDto, TransitionDto } from './dto/task.dto';
+import { AssignDto, CreateTaskDto, TaskListQueryDto, TransitionDto } from './dto/task.dto';
 import { TasksService } from './tasks.service';
 
 @UseGuards(JwtAuthGuard)
@@ -42,6 +42,11 @@ export class TasksController {
   @Post('tasks/:id/transition')
   transition(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: TransitionDto) {
     return this.tasks.transition(user.id, id, dto.to);
+  }
+
+  @Post('tasks/:id/assign')
+  assign(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignDto) {
+    return this.tasks.assign(user.id, id, dto.agentId);
   }
 
   @Post('tasks/:id/cancel')
